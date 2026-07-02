@@ -17,6 +17,7 @@ app = FastAPI(title="EcoRoute IQ")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],  # Vite's default dev port
+    allow_origin_regex=r"https://.*\.onrender\.com",
     allow_methods=["*"],
     allow_headers=["*"],
 )
