@@ -16,8 +16,11 @@ app = FastAPI(title="EcoRoute IQ")
 # Lets your React frontend (running on a different port) talk to this backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite's default dev port
-    allow_origin_regex=r"https://.*\.onrender\.com",
+    allow_origins=[
+        "http://localhost:5173",
+        "https://ecoroute-iq.vercel.app",
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_methods=["*"],
     allow_headers=["*"],
 )
