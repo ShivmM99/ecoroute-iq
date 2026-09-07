@@ -6,14 +6,14 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-load_dotenv()  # reads .env into environment variables
+load_dotenv() 
 GOOGLE_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 
 anthropic_client = Anthropic()
 
 app = FastAPI(title="EcoRoute IQ")
 
-# Lets your React frontend (running on a different port) talk to this backend
+# React frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -25,12 +25,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# The shape of the request we expect from the frontend
 class RouteRequest(BaseModel):
-    origin: str       # e.g. "Cornell University, Ithaca NY"
-    destination: str  # e.g. "Ithaca Commons"
+    origin: str      
+    destination: str 
 
-# Google's Routes API travel modes we care about
+# Google's Routes API parameters
 TRAVEL_MODES = ["DRIVE", "TRANSIT", "BICYCLE", "WALK"]
 
 EMISSIONS_G_PER_KM = {
@@ -49,7 +48,7 @@ async def fetch_one_mode(client, origin, destination, mode):
         "destination": {"address": destination},
         "travelMode": mode,
     }
-    # Routes API uses a field mask to say which fields you want back
+    # Routes API
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": GOOGLE_KEY,
@@ -81,7 +80,6 @@ async def fetch_one_mode(client, origin, destination, mode):
 
 def generate_eco_summary(origin, destination, greenest_mode, co2_saved, routes):
     """Ask Claude to write a short, witty eco-coach summary of the trip."""
-    # Build a plain-text description of the options for the prompt
     options_text = "\n".join(
         f"- {r['mode']}: {r['distance_km']} km, {r['co2_grams']} g CO2"
         for r in routes
@@ -105,7 +103,6 @@ saved (e.g. phone charges, cups of coffee). Do not use hashtags."""
         max_tokens=200,
         messages=[{"role": "user", "content": prompt}],
     )
-    # The response text lives in the first content block
     return message.content[0].text
 
 @app.post("/routes")
@@ -119,15 +116,13 @@ async def get_routes(req: RouteRequest):
             result = await fetch_one_mode(client, req.origin, req.destination, mode)
             results.append(result)
 
-    # Only consider modes that actually returned a route
     available = [r for r in results if r.get("available")]
 
-    # Rank greenest first (lowest CO2)
+    # Rank greenest first
     ranked = sorted(available, key=lambda r: r["co2_grams"])
 
     greenest = ranked[0] if ranked else None
 
-    # How much CO2 does driving cost, for a savings comparison?
     drive = next((r for r in available if r["mode"] == "DRIVE"), None)
     savings = None
     if greenest and drive:
